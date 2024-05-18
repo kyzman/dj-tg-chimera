@@ -1,6 +1,7 @@
 # Не оптимизировать импорты и не менять их порядок
 
 import os, django
+import pprint
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dj_config.settings")
 os.environ.update({'DJANGO_ALLOW_ASYNC_UNSAFE': "true"})
@@ -10,7 +11,7 @@ import logging
 
 from asgiref.sync import sync_to_async
 
-from dj_admin.models import TGUser
+from dj_admin.models import TGUser, ItemGroup
 
 logger = logging.getLogger(__name__)
 
@@ -23,3 +24,8 @@ async def add_or_update_user(data: dict) -> TGUser:
     else:
         logger.info(f"User {user.tg_id} ({user.username}) was updated")
     return user
+
+
+async def get_groups(page: int = 1) -> list[ItemGroup]:
+    return [group async for group in ItemGroup.objects.all()]
+

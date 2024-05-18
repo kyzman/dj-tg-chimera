@@ -8,15 +8,16 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-from aiogram import Bot, Dispatcher
-from aiogram.filters import Command
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import Command, or_f
 from aiogram.fsm.storage.memory import MemoryStorage
 # from aiogram.fsm.storage.redis import RedisStorage
 
 from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK
 from tgbot.utils.commands import set_commands
 from tgbot.middlewares.security import CheckAllowedMiddleware
-from tgbot.handlers import basic
+from tgbot.handlers import basic, catalog
+from tgbot.utils.statesform import StepsFSM
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,14 @@ async def start():
 
     dp.message.register(basic.get_start, Command(commands=['start', 'run']))
     dp.message.register(basic.get_help, Command(commands='help'))
+
+    dp.message.register(catalog.get_catalog, Command(commands=['cat', 'catalog']))
+    dp.message.register(catalog.msg_cancel_handler,
+                        or_f(Command(commands=['stop', 'cancel', 'reload', 'restart'], prefix='/!'),
+                             F.text.casefold() == "cancel", F.text.casefold() == "stop")
+                        )
+    dp.callback_query.register(catalog.cbk_cancel_handler, F.data.startswith('cancel_soft'))
+    dp.callback_query.register(catalog.get_catalog_page, F.data.startswith('cat_page_'), StepsFSM.select_item)
 
     if WEBHOOK:
         app = web.Application()

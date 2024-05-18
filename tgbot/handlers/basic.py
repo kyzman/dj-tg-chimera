@@ -13,7 +13,6 @@ async def get_start(msg: types.Message, bot: Bot):
             'last_name': msg.from_user.last_name}
     user = await add_or_update_user(data)
     await msg.answer(f'Привет. Вы в базе с id {user.tg_id}')
-    pprint.pp(msg.from_user)
     await bot.send_message(msg.from_user.id, f"<b>Привет {msg.from_user.first_name}. Рад тебя видеть!</b>")
 
 
