@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 # @sync_to_async
-async def add_or_create_user(user_id: int) -> TGUser:
-    user, created = await TGUser.objects.aget_or_create(tg_id=user_id)
+async def add_or_update_user(data: dict) -> TGUser:
+    user, created = await TGUser.objects.aupdate_or_create(**data)
     if created:
-        logger.info(f"user {user.tg_id} was added to DB")
+        logger.info(f"user {user.tg_id} ({user.username}) was added to DB")
     else:
-        logger.info(f"User {user.tg_id} is already exist")
+        logger.info(f"User {user.tg_id} ({user.username}) was updated")
     return user

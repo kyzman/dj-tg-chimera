@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from dj_admin.models import TGUser
+from dj_admin.models import TGUser, ItemGroup, ItemCategory, GoodItem, Question, Order
 
 
 class TGUserAdmin(admin.ModelAdmin):
@@ -12,3 +12,8 @@ class TGUserAdmin(admin.ModelAdmin):
 
 
 admin.site.register(TGUser, TGUserAdmin)
+admin.site.register(ItemGroup)
+admin.site.register(ItemCategory)
+admin.site.register(GoodItem)
+admin.site.register(Question)
+admin.site.register(Order)
