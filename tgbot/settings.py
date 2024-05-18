@@ -20,8 +20,6 @@ ALLOWED_IDs = '*'
 class Bots:
     bot_token: str
     admin_id: int
-    channel: int
-    bookmarks_chat: int
 
 
 @dataclass
@@ -36,7 +34,6 @@ class Db:
 @dataclass
 class Settings:
     bots: Bots
-    db: Db
 
 
 def get_settings(path: str):
@@ -47,32 +44,14 @@ def get_settings(path: str):
         bots=Bots(
             bot_token=env.str("TOKEN"),
             admin_id=env.int("ADMIN_ID"),
-            channel=env.int("MY_CHANNEL"),
-            bookmarks_chat=env.int("MY_CHAT_BOOKMARKS")
         ),
-        db=Db(
-            host=env.str("DB_HOST"),
-            database=env.str("DB_DATABASE"),
-            user=env.str("DB_USER"),
-            password=env.str("DB_PASSWORD"),
-            users_table=env.str("DB_TABLE_USERS"),
-
-        )
     )
 
 
-settings = get_settings('input')
+settings = get_settings('.env')
 WEBHOOK_PATH = f"/{settings.bots.bot_token}"
 WEBHOOK_URL = f"https://{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
-# file 'input' must be in root folder and have text format such as:
+# file '.env' must be in root folder and have text format such as:
 # TOKEN=your bot token
 # ADMIN_ID=your telegram ID
-# MY_CHANNEL=
-# MY_CHAT_BOOKMARKS=
-
-# DB_HOST=your DataBase host name
-# DB_DATABASE=your database name
-# DB_USER=your DataBase access user
-# DB_PASSWORD=your DataBase access password
-# DB_TABLE_USERS=your table for store user IDs in DataBase

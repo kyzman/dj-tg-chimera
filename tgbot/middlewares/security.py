@@ -3,7 +3,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 # from icecream import ic
 
-from core.settings import ALLOWED_IDs, FORBIDDEN_MSG
+from tgbot.settings import ALLOWED_IDs, FORBIDDEN_MSG
 
 
 def get_allowed(user_id) -> bool:

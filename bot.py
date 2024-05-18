@@ -1,8 +1,11 @@
 import asyncio
 import logging
-import asyncpg
 import contextlib
+import django
+import os
 
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from aiogram import Bot, Dispatcher
@@ -10,11 +13,12 @@ from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 # from aiogram.fsm.storage.redis import RedisStorage
 
-from core.settings import settings, WEBHOOK_PATH, WEBHOOK
-from core.utils.commands import set_commands
-from core.middlewares.dbmiddleware import Dbsession
-from core.middlewares.security import CheckAllowedMiddleware
-from core.handlers import basic
+from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK
+from tgbot.utils.commands import set_commands
+from tgbot.middlewares.security import CheckAllowedMiddleware
+from tgbot.handlers import basic
+
+logger = logging.getLogger(__name__)
 
 
 async def start_bot(bot: Bot):
@@ -25,10 +29,13 @@ async def stop_bot(bot: Bot):
     ...
 
 
-async def create_pool():
-    return await asyncpg.create_pool(user=settings.db.user, password=settings.db.password,
-                                     database=settings.db.database,
-                                     host=settings.db.host, port=5432, command_timeout=60)
+def setup_django():
+    os.environ.setdefault(
+        "DJANGO_SETTINGS_MODULE",
+        "dj_config.settings"
+    )
+    os.environ.update({'DJANGO_ALLOW_ASYNC_UNSAFE': "true"})
+    django.setup()
 
 
 async def start():
@@ -36,25 +43,14 @@ async def start():
                         format="%(asctime)s - [%(levelname)s] - %(name)s - "
                                "(%(filename)s).%(funcName)s(%(lineno)d) - %(message)s"
                         )
-
-    bot = Bot(settings.bots.bot_token, parse_mode='HTML')
-    pool_connect = await create_pool()
-    query = f'''
-    CREATE TABLE IF NOT EXISTS {settings.db.users_table}
-    (
-    user_id bigint NOT NULL,
-    user_name text COLLATE pg_catalog."default",
-    CONSTRAINT {settings.db.users_table}_pkey PRIMARY KEY (user_id)
-    );'''
-    async with pool_connect.acquire() as connect:
-        await connect.execute(query)
+    setup_django()
+    bot = Bot(settings.bots.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     # storage = RedisStorage.from_url('redis://localhost:6379/0')
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
 
     dp.update.middleware.register(CheckAllowedMiddleware())  # проверка доступа к боту, кому разрешено с ним работать.
-    dp.update.middleware.register(Dbsession(pool_connect))
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
 
