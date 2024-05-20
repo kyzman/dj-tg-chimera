@@ -5,8 +5,8 @@ from aiogram.types import BotCommand, BotCommandScopeDefault
 async def set_commands(bot: Bot):
     commands = [
         BotCommand(
-            command='start',
-            description='Начало работы'
+            command='stop',
+            description='Отменить (начать сначала)'
         ),
         BotCommand(
             command='help',

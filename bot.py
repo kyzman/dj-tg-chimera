@@ -13,7 +13,7 @@ from aiogram.filters import Command, or_f
 from aiogram.fsm.storage.memory import MemoryStorage
 # from aiogram.fsm.storage.redis import RedisStorage
 
-from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK
+from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF
 from tgbot.utils.commands import set_commands
 from tgbot.middlewares.security import CheckAllowedMiddleware
 from tgbot.handlers import basic, catalog
@@ -55,7 +55,7 @@ async def start():
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
 
-    dp.message.register(basic.get_start, Command(commands=['start', 'run']))
+    dp.message.register(basic.get_start, Command(commands=['start', 'run', 'register', 'update'], prefix='/!'))
     dp.message.register(basic.get_help, Command(commands='help'))
 
     dp.message.register(catalog.get_catalog, Command(commands=['cat', 'catalog']))
@@ -64,7 +64,17 @@ async def start():
                              F.text.casefold() == "cancel", F.text.casefold() == "stop")
                         )
     dp.callback_query.register(catalog.cbk_cancel_handler, F.data.startswith('cancel_soft'))
-    dp.callback_query.register(catalog.get_catalog_page, F.data.startswith('cat_page_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.get_catalog_page, F.data.startswith(f'{PREF.group}_page_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.get_cat_category, F.data.startswith(f'{PREF.group}_select_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.get_category_page, F.data.startswith(f'{PREF.category}_page_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.select_goods_cat, F.data.startswith(f'{PREF.category}_select_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.get_items_page, F.data.startswith(f'{PREF.item}_page_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.get_goods_item, F.data.startswith(f'{PREF.item}_select_'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.manipulate_good_item, F.data.startswith(f'{PREF.cart_add}:'), StepsFSM.select_item)
+
+    dp.message.register(catalog.unknown_input, StepsFSM.select_item)
+    dp.message.register(basic.unknown_command)
+    dp.callback_query.register(basic.unknown_callback)
 
     if WEBHOOK:
         app = web.Application()

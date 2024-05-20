@@ -11,8 +11,8 @@ class TimeBasedModel(models.Model):
 
 
 class TGUser(TimeBasedModel):
-    tg_id = models.BigIntegerField(unique=True, db_index=True, verbose_name='id Telegram')
-    username = models.CharField(max_length=32, unique=True)
+    tg_id = models.BigIntegerField(unique=True, primary_key=True, db_index=True, verbose_name='id Telegram')
+    username = models.CharField(max_length=32, null=True, blank=True, unique=True)
     first_name = models.CharField(max_length=64, null=True, blank=True)
     last_name = models.CharField(max_length=64, null=True, blank=True)
 
@@ -36,27 +36,43 @@ class ItemCategory(models.Model):
     group = models.ForeignKey(ItemGroup, on_delete=models.PROTECT, verbose_name='Группа товаров')
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.group})"
 
 
 class GoodItem(models.Model):
-    title = models.CharField(max_length=32)
+    name = models.CharField(max_length=32)
     desc = models.CharField(max_length=255, blank=True, null=True)
     image = models.ImageField(upload_to='images/', verbose_name='Изображение')
     price = models.IntegerField()
     cat = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, verbose_name='Категория товаров')
 
+    def __str__(self):
+        return self.name
+
+
+# class PersonManager(models.Manager):
+#     async def get_by_natural_key(self, first_name, last_name):
+#         return await self.aget(first_name=first_name, last_name=last_name)
+
 
 class CartItem(TimeBasedModel):
-    user = models.ForeignKey(TGUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(TGUser, on_delete=models.CASCADE, to_field='tg_id')
     item = models.ForeignKey(GoodItem, on_delete=models.CASCADE)
     qty = models.PositiveIntegerField(default=1, blank=True)
 
+    # objects = PersonManager()
 
-class Cart(models.Model):
-    user = models.ForeignKey(TGUser, on_delete=models.CASCADE)
-    basket = models.ManyToManyField(CartItem, blank=True)
-    delivery_address = models.CharField(max_length=255, blank=True, null=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'item'], name='ck_user_item')
+        ]
+
+
+
+# class Cart(models.Model):
+#     user = models.ForeignKey(TGUser, unique=True, on_delete=models.CASCADE)
+#     basket = models.ManyToManyField(CartItem, blank=True)
+#     delivery_address = models.CharField(max_length=255, blank=True, null=True)
 
 
 class Question(TimeBasedModel):

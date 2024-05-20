@@ -1,8 +1,10 @@
 from environs import Env
 from dataclasses import dataclass
 
-BASE_HELP = '''/start - начать работу
+BASE_HELP = '''/start - начать работу, зарегистрироваться в системе или обновить информацию.
 /help получить эту помощь
+/stop, /cancel, /restart - отменить все действия и вернуться к изначальному состоянию.
+/cat, /catalog - посмотреть каталог товаров.
 '''
 
 FORBIDDEN_MSG = "Вам запрещено взаимодействие с этим ботом!"
@@ -13,6 +15,16 @@ ALLOWED_IDs = '*'
 # Список telegram ID пользователей, кому будет разрешено взаимодействие с ботом
 
 ITEMS_IN_PAGE = 3
+
+# хост где будет расположен проект DJANGO. Необходимо для корректной загрузки изображений.
+DJANGO_HOST = 'https://kyzman.pythonanywhere.com'  # временно указан тестовый
+
+@dataclass
+class PREF:
+    group = 'grp'
+    category = 'cat'
+    item = 'itm'
+    cart_add = 'add'  # Don't use ':' in that field!
 
 
 @dataclass
