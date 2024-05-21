@@ -6,4 +6,5 @@ class StepsFSM(StatesGroup):
     item_selected = State()
     item_added = State()
     item_removed = State()
+    cart_order = State()
     cart_ordered = State()

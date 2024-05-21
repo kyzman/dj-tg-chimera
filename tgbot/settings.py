@@ -1,11 +1,20 @@
 from environs import Env
 from dataclasses import dataclass
+from openpyxl.styles import Side
 
 BASE_HELP = '''/start - начать работу, зарегистрироваться в системе или обновить информацию.
 /help получить эту помощь
 /stop, /cancel, /restart - отменить все действия и вернуться к изначальному состоянию.
 /cat, /catalog - посмотреть каталог товаров.
+/cart - посмотреть корзину (работает и во время выбора товаров)
 '''
+
+double = Side(border_style="medium", color="00000000")
+thin = Side(border_style="thin", color="00000000")
+
+MIN_PAYMENT_AMOUNT = 111
+
+CART_DESC = "Список выбранных товаров к заказу.\nВыберете позицию из списка для удаления.\n"
 
 FORBIDDEN_MSG = "Вам запрещено взаимодействие с этим ботом!"
 
@@ -16,7 +25,7 @@ ALLOWED_IDs = '*'
 
 ITEMS_IN_PAGE = 3
 
-# хост где будет расположен проект DJANGO. Необходимо для корректной загрузки изображений.
+# хост где будет расположен проект DJANGO. Необходимо для корректной загрузки изображений в бота.
 DJANGO_HOST = 'https://kyzman.pythonanywhere.com'  # временно указан тестовый
 
 @dataclass
@@ -25,12 +34,14 @@ class PREF:
     category = 'cat'
     item = 'itm'
     cart_add = 'add'  # Don't use ':' in that field!
+    cart_del = 'del'
 
 
 @dataclass
 class Bots:
     bot_token: str
     admin_id: int
+    payments: str
 
 
 @dataclass
@@ -55,6 +66,7 @@ def get_settings(path: str):
         bots=Bots(
             bot_token=env.str("TOKEN"),
             admin_id=env.int("ADMIN_ID"),
+            payments=env.str("PAYMENTS")
         ),
     )
 

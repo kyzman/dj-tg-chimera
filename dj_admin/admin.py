@@ -18,5 +18,4 @@ admin.site.register(GoodItem)
 admin.site.register(Question)
 admin.site.register(Order)
 
-admin.site.register(CartItem)
-# admin.site.register(Cart)
+# admin.site.register(CartItem)

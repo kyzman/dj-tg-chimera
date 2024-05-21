@@ -50,29 +50,18 @@ class GoodItem(models.Model):
         return self.name
 
 
-# class PersonManager(models.Manager):
-#     async def get_by_natural_key(self, first_name, last_name):
-#         return await self.aget(first_name=first_name, last_name=last_name)
-
-
 class CartItem(TimeBasedModel):
     user = models.ForeignKey(TGUser, on_delete=models.CASCADE, to_field='tg_id')
     item = models.ForeignKey(GoodItem, on_delete=models.CASCADE)
     qty = models.PositiveIntegerField(default=1, blank=True)
-
-    # objects = PersonManager()
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['user', 'item'], name='ck_user_item')
         ]
 
-
-
-# class Cart(models.Model):
-#     user = models.ForeignKey(TGUser, unique=True, on_delete=models.CASCADE)
-#     basket = models.ManyToManyField(CartItem, blank=True)
-#     delivery_address = models.CharField(max_length=255, blank=True, null=True)
+    def __str__(self):
+        return f"[{self.user}] {self.item}"
 
 
 class Question(TimeBasedModel):
@@ -83,6 +72,9 @@ class Question(TimeBasedModel):
 
 class Order(TimeBasedModel):
     user = models.ForeignKey(TGUser, on_delete=models.CASCADE)
-    cart = models.ManyToManyField(CartItem, blank=True)
+    cart = models.JSONField(blank=True, null=True)
     delivery_address = models.CharField(max_length=255, blank=True, null=True)
     summary = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"[{self.pk}] {self.delivery_address} от {self.updated.strftime('%d-%m-%Y %H:%M:%S')}"

@@ -5,7 +5,7 @@ import django
 import os
 
 from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode, ContentType
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
@@ -16,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF
 from tgbot.utils.commands import set_commands
 from tgbot.middlewares.security import CheckAllowedMiddleware
-from tgbot.handlers import basic, catalog
+from tgbot.handlers import basic, catalog, cart, pay
 from tgbot.utils.statesform import StepsFSM
 
 logger = logging.getLogger(__name__)
@@ -58,12 +58,24 @@ async def start():
     dp.message.register(basic.get_start, Command(commands=['start', 'run', 'register', 'update'], prefix='/!'))
     dp.message.register(basic.get_help, Command(commands='help'))
 
+    # Обработчики корзины
+    dp.message.register(cart.get_cart, Command(commands='cart'))
+    dp.callback_query.register(cart.get_cart_page, F.data.startswith(f'{PREF.cart_del}_page_'))
+    dp.callback_query.register(cart.del_cart_item, F.data.startswith(f'{PREF.cart_del}_del_'))
+    dp.callback_query.register(cart.input_address, F.data == 'create_order')
+
+    # ОПЛАТА ЗАКАЗА
+    dp.message.register(pay.send_order, StepsFSM.cart_order)
+    dp.pre_checkout_query.register(pay.pre_checkout_query)
+    dp.message.register(pay.success_payment, F.content_type == ContentType.SUCCESSFUL_PAYMENT)
+
+    # Обработчики для Каталога
     dp.message.register(catalog.get_catalog, Command(commands=['cat', 'catalog']))
     dp.message.register(catalog.msg_cancel_handler,
                         or_f(Command(commands=['stop', 'cancel', 'reload', 'restart'], prefix='/!'),
                              F.text.casefold() == "cancel", F.text.casefold() == "stop")
                         )
-    dp.callback_query.register(catalog.cbk_cancel_handler, F.data.startswith('cancel_soft'))
+    dp.callback_query.register(catalog.cbk_cancel_handler, F.data == 'cancel_soft')
     dp.callback_query.register(catalog.get_catalog_page, F.data.startswith(f'{PREF.group}_page_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.get_cat_category, F.data.startswith(f'{PREF.group}_select_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.get_category_page, F.data.startswith(f'{PREF.category}_page_'), StepsFSM.select_item)

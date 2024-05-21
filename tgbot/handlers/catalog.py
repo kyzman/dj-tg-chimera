@@ -1,3 +1,4 @@
+# TODO необходима DRY оптимизация кода
 import logging
 import pprint
 
@@ -8,34 +9,45 @@ from aiogram.types import ReplyKeyboardRemove
 
 from dj_admin.models import ItemGroup
 
-from tgbot.keyboards.inline import get_catalog_ikb, get_item_ikb
+from tgbot.keyboards.inline import get_catalog_ikb, get_item_ikb, get_cart_ikb
 from tgbot.orm.commands import get_groups, add_or_update_user, get_category, get_goods_items, get_one_item, add_to_cart, \
-    check_in_cart
-from tgbot.settings import PREF, DJANGO_HOST
+    check_in_cart, get_user_cart
+from tgbot.settings import PREF, DJANGO_HOST, CART_DESC
 from tgbot.utils.statesform import StepsFSM
+from tgbot.utils.utils import clear_stored_messages
 
 logger = logging.getLogger(__name__)
 
 
 async def get_catalog(msg: types.Message, bot: Bot, state: FSMContext):
-    if await state.get_state():
-        await msg.delete()
-        return
+    already_msg_id = False
+    if await state.get_state() == StepsFSM.select_item:
+        data = await state.get_data()
+        if not (msg.text == '/cat' or msg.text == '/catalog'):
+            await msg.delete()
+            return
+        else:
+            already_msg_id = data.get('identity').get('msg_id')
+            await msg.delete()
+    else:
+        await state.set_state(StepsFSM.select_item)
     data = {'tg_id': int(msg.from_user.id),
             'username': msg.from_user.username,
             'first_name': msg.from_user.first_name,
             'last_name': msg.from_user.last_name}
     await add_or_update_user(data)
-    await state.clear()
     await state.set_state(StepsFSM.select_item)
-    await state.set_data({'groups': await get_groups(), 'previous': f"{PREF.group}_page_1"})
+    await state.update_data({'groups': await get_groups(), 'previous': f"{PREF.group}_page_1"})
     data = await state.get_data()
     result: list[ItemGroup] = data.get('groups')
     image = types.InputMediaPhoto(media='https://boxingmaster.ru/image/cache/katalog-600x315.png', caption='Группа товаров')
-    msg_id: types.Message = await msg.answer_photo(image.media, image.caption,
+    if already_msg_id:
+        await bot.edit_message_caption(msg.chat.id, already_msg_id, caption=image.caption, reply_markup=get_catalog_ikb(result, PREF.group, prev=None))
+    else:
+        msg_id: types.Message = await msg.answer_photo(image.media, image.caption,
                      reply_markup=get_catalog_ikb(result, PREF.group, prev=None),
                      parse_mode=ParseMode.MARKDOWN, allow_sending_without_reply=True)
-    await state.update_data({'identity': {'chat_id': msg_id.chat.id, 'msg_id': msg_id.message_id},
+        await state.update_data({'identity': {'chat_id': msg_id.chat.id, 'msg_id': msg_id.message_id},
                              'photo': types.InputMediaPhoto(media=msg_id.photo[-1].file_id, caption="Группа товаров")})
 
 
@@ -47,11 +59,8 @@ async def msg_cancel_handler(msg: types.Message, bot: Bot, state: FSMContext) ->
     if current_state is None:
         return
     data = await state.get_data()
-    if ids := data.get('identity'):
-        if ids.get('chat_id') == msg.chat.id:
-            await bot.edit_message_caption(chat_id=ids.get('chat_id'), message_id=ids.get('msg_id'), caption='Вы отменили выбор', reply_markup=None)
-        else:
-            return
+
+    await clear_stored_messages(bot, msg.chat.id, data)
 
     logging.info("Cancelling state %r", current_state)
     await state.clear()
@@ -62,8 +71,11 @@ async def msg_cancel_handler(msg: types.Message, bot: Bot, state: FSMContext) ->
 
 
 async def cbk_cancel_handler(cbk: types.CallbackQuery, bot: Bot, state: FSMContext):
-    await cbk.message.edit_caption(caption="Вы отменили выбор", reply_markup=None)
-    await state.clear()
+    if cbk.message.caption:
+        await cbk.message.edit_caption(caption="Вы отменили выбор", reply_markup=None)
+    elif cbk.message.text:
+        await cbk.message.edit_text(text="Вы отменили выбор", reply_markup=None)
+    # await state.clear()
     await cbk.answer('Cancelled.')
 
 
@@ -156,24 +168,30 @@ async def manipulate_good_item(cbk: types.CallbackQuery, bot: Bot, state: FSMCon
             await cbk.answer('Меньше 1 шт добавить нельзя!')
             return
     elif operator == '=':
-        await add_to_cart(cbk.from_user.id, item_id, qty)
+        try:
+            _ = caption[6]
+            old_qty = (await check_in_cart(cbk.from_user.id, item_id)).qty
+        except Exception as e:
+            old_qty = 0
+        await add_to_cart(cbk.from_user.id, item_id, qty+old_qty)
         await cbk.answer('Добавлено в корзину!')
-        return
+        st_dta = await state.get_data()
+        cart_msg_id = st_dta.get('msg_cart_id')
+        if cart_msg_id:
+            new_cart = await get_user_cart(cbk.from_user.id)
+            cart_msg = f"{CART_DESC}Позиции в корзине <b>({len(new_cart)})</b>:"
+            await bot.edit_message_text(cart_msg, chat_id=cbk.message.chat.id, message_id=cart_msg_id, reply_markup=get_cart_ikb(new_cart, PREF.cart_del, -1), parse_mode=ParseMode.HTML)
+            await state.update_data({'cart': new_cart})
     caption[3] = qty_text
     caption[0] = f"<b>{caption[0]}</b>"
     price = item.price
     caption[2] = f"Цена: {price}"
     caption[4] = f"<u>Сумма выбранного: {qty*price}</u>"
-    try:
-        _ = caption[6]
-        old_qty = (await check_in_cart(cbk.from_user.id, item_id)).qty
-    except Exception as e:
-        old_qty = 0
     new_caption = "\n".join(caption)
     await cbk.message.edit_caption(caption=new_caption,
                                    reply_markup=get_item_ikb(item_id,
                                                            {'name': 'К товарам', 'act': f"{PREF.item}_page_1"},
-                                                           qty=qty+old_qty,
+                                                           qty=qty,
                                                            pref=PREF.cart_add),
                                    parse_mode=ParseMode.HTML)
     await cbk.answer()

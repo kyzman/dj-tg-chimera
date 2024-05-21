@@ -1,3 +1,4 @@
+# TODO использование orm django плохая идея, т.к. возникает проблема конечности пула соединений. Для частичного решения можно использовать pgBouncer, но лучшее решение отказаться от orm django и использовать асинхронную sqlalchemy
 # Не оптимизировать импорты и не менять их порядок
 
 import os, django
@@ -13,7 +14,7 @@ import logging
 
 from asgiref.sync import sync_to_async
 
-from dj_admin.models import TGUser, ItemGroup, ItemCategory, GoodItem, CartItem
+from dj_admin.models import TGUser, ItemGroup, ItemCategory, GoodItem, CartItem, Order
 
 logger = logging.getLogger(__name__)
 
@@ -67,3 +68,53 @@ async def check_in_cart(user, item) -> CartItem | None:
     except ObjectDoesNotExist:
         obj = None
     return obj
+
+
+async def get_user_cart(user) -> list[CartItem]:
+    return [item async for item in CartItem.objects.filter(user=user)]
+
+
+async def del_item_from_cart(rec_id):
+    try:
+        b = await CartItem.objects.aget(pk=rec_id)
+    except:
+        return
+    return await b.adelete()
+
+
+async def create_order_from_cart(user_id, address) -> Order | None:
+    try:
+        user = await TGUser.objects.aget(tg_id=user_id)
+    except:
+        return None
+    items = await get_user_cart(user)
+    cart = list(map(lambda i: {'pk': i.item.pk,
+                               'name': i.item.name,
+                               'price': i.item.price,
+                               'qty': i.qty},
+                    items))
+    total_sum = sum(list(map(lambda i: i.get('price', 0)*i.get('qty'), cart)))
+    try:
+        order = await Order.objects.acreate(user=user, cart=cart, delivery_address=address, summary=total_sum)
+    except:
+        return None
+    # create_xlsx_order(cart, order_no=order.pk, date=order.updated, address=order.delivery_address)
+    return order
+
+
+async def get_order_by_id(order_id) -> Order | None:
+    try:
+        obj = await Order.objects.aget(pk=order_id)
+    except ObjectDoesNotExist:
+        obj = None
+    return obj
+
+
+async def clear_user_cart(user):
+    try:
+        b = CartItem.objects.filter(user=user)
+    except:
+        return 0
+    return await b.adelete()
+
+

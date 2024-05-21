@@ -93,6 +93,11 @@ DATABASES = {
         'HOST': POSTGRES_HOST,
         'PORT': POSTGRES_PORT,
         'ATOMIC_REQUESTS': True,
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3 * 60
+        }
     }
 }
 
@@ -141,3 +146,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MEDIA_ROOT = BASE_DIR / 'media'
 
 MEDIA_URL = '/media/'
+
+XLSX_DIR = os.environ.get("XLSX_DIR", "")
