@@ -5,6 +5,7 @@ import os, django
 import pprint
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dj_config.settings")
 os.environ.update({'DJANGO_ALLOW_ASYNC_UNSAFE': "true"})
@@ -14,7 +15,7 @@ import logging
 
 from asgiref.sync import sync_to_async
 
-from dj_admin.models import TGUser, ItemGroup, ItemCategory, GoodItem, CartItem, Order
+from dj_admin.models import TGUser, ItemGroup, ItemCategory, GoodItem, CartItem, Order, Question
 
 logger = logging.getLogger(__name__)
 
@@ -117,4 +118,28 @@ async def clear_user_cart(user):
         return 0
     return await b.adelete()
 
+
+async def get_faq_questions() -> list[Question]:
+    return [item async for item in Question.objects.filter(~Q(answer="") & ~Q(answer__isnull=True))]
+
+
+async def ask_or_record_question(question) -> Question | None:
+    try:
+        obj = await Question.objects.aget(name=question)
+        await Question.objects.filter(name=question).aupdate(count=obj.count + 1)
+    except ObjectDoesNotExist:
+        await Question.objects.acreate(name=question)
+        return None
+    except Exception as e:
+        logger.error(e)
+        return None
+    return obj
+
+
+async def get_answer_on_question(qst_id) -> Question:
+    try:
+        obj = await Question.objects.aget(pk=qst_id)
+    except ObjectDoesNotExist:
+        obj = None
+    return obj
 

@@ -65,9 +65,12 @@ class CartItem(TimeBasedModel):
 
 
 class Question(TimeBasedModel):
-    title = models.CharField(max_length=512)
-    answer = models.TextField()
+    name = models.CharField(max_length=512)
+    answer = models.TextField(null=True, blank=True)
     count = models.PositiveIntegerField(default=1, blank=True)
+
+    def __str__(self):
+        return f"{self.name} [{self.count}]"
 
 
 class Order(TimeBasedModel):

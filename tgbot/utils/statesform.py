@@ -8,3 +8,4 @@ class StepsFSM(StatesGroup):
     item_removed = State()
     cart_order = State()
     cart_ordered = State()
+    faq_question = State()

@@ -16,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF
 from tgbot.utils.commands import set_commands
 from tgbot.middlewares.security import CheckAllowedMiddleware
-from tgbot.handlers import basic, catalog, cart, pay
+from tgbot.handlers import basic, catalog, cart, pay, faq
 from tgbot.utils.statesform import StepsFSM
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,9 @@ async def start():
     dp.message.register(pay.send_order, StepsFSM.cart_order)
     dp.pre_checkout_query.register(pay.pre_checkout_query)
     dp.message.register(pay.success_payment, F.content_type == ContentType.SUCCESSFUL_PAYMENT)
+    # оплата через yookassa вместо обычной - не тестировалась!
+    # dp.message.register(pay.send_yookassa_order, StepsFSM.cart_order)
+    # dp.callback_query.register(pay.check_yookassa_handler, F.data.startswith('check_'))
 
     # Обработчики для Каталога
     dp.message.register(catalog.get_catalog, Command(commands=['cat', 'catalog']))
@@ -83,6 +86,12 @@ async def start():
     dp.callback_query.register(catalog.get_items_page, F.data.startswith(f'{PREF.item}_page_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.get_goods_item, F.data.startswith(f'{PREF.item}_select_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.manipulate_good_item, F.data.startswith(f'{PREF.cart_add}:'), StepsFSM.select_item)
+
+    # Обработчик вопросов FAQ
+    dp.message.register(faq.get_questions, Command(commands='faq'))
+    dp.callback_query.register(faq.get_questions_page, F.data.startswith(f'{PREF.question}_page_'))
+    dp.callback_query.register(faq.get_answer, F.data.startswith(f'{PREF.question}_select_'))
+    dp.message.register(faq.ask_question, StepsFSM.faq_question)
 
     dp.message.register(catalog.unknown_input, StepsFSM.select_item)
     dp.message.register(basic.unknown_command)

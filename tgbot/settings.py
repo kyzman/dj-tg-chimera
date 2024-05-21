@@ -4,9 +4,10 @@ from openpyxl.styles import Side
 
 BASE_HELP = '''/start - начать работу, зарегистрироваться в системе или обновить информацию.
 /help получить эту помощь
-/stop, /cancel, /restart - отменить все действия и вернуться к изначальному состоянию.
+/stop, /cancel, /restart - жёстко отменить все действия и вернуться к изначальному состоянию.
 /cat, /catalog - посмотреть каталог товаров.
 /cart - посмотреть корзину (работает и во время выбора товаров)
+/faq - посмотреть список часто задаваемых вопросов и/или задать свой.
 '''
 
 double = Side(border_style="medium", color="00000000")
@@ -28,6 +29,7 @@ ITEMS_IN_PAGE = 3
 # хост где будет расположен проект DJANGO. Необходимо для корректной загрузки изображений в бота.
 DJANGO_HOST = 'https://kyzman.pythonanywhere.com'  # временно указан тестовый
 
+
 @dataclass
 class PREF:
     group = 'grp'
@@ -35,6 +37,7 @@ class PREF:
     item = 'itm'
     cart_add = 'add'  # Don't use ':' in that field!
     cart_del = 'del'
+    question = 'qst'
 
 
 @dataclass
@@ -42,6 +45,12 @@ class Bots:
     bot_token: str
     admin_id: int
     payments: str
+
+
+@dataclass
+class Yookassa:
+    account: str
+    secret: str
 
 
 @dataclass
@@ -56,18 +65,22 @@ class Db:
 @dataclass
 class Settings:
     bots: Bots
+    yookassa: Yookassa
 
 
 def get_settings(path: str):
     env = Env()
     env.read_env(path)
-
     return Settings(
         bots=Bots(
             bot_token=env.str("TOKEN"),
             admin_id=env.int("ADMIN_ID"),
             payments=env.str("PAYMENTS")
-        ),
+            ),
+        yookassa=Yookassa(
+            account=env.str("ACCOUNT_ID"),
+            secret=env.str("SECRET_KEY")
+            )
     )
 
 

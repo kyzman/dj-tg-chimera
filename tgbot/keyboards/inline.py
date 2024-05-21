@@ -75,3 +75,16 @@ def get_cart_ikb(items, pref, page: int = 1) -> InlineKeyboardMarkup:
 
     return ikb.as_markup()
 
+
+def payment_ikb(payment_url, payment_id):
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text='Оплатить',
+        url=payment_url
+    )
+    builder.button(
+        text='Проверить оплату',
+        callback_data=f'check_{payment_id}'
+    )
+    return builder.as_markup()
+

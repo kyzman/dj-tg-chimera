@@ -6,10 +6,10 @@ from aiogram.fsm.context import FSMContext
 
 from dj_admin.models import CartItem
 from tgbot.keyboards.inline import get_cart_ikb
-from tgbot.orm.commands import get_user_cart, del_item_from_cart, create_order_from_cart, clear_user_cart
+from tgbot.orm.commands import get_user_cart, del_item_from_cart
 from tgbot.settings import PREF, CART_DESC
 from tgbot.utils.statesform import StepsFSM
-from tgbot.utils.utils import check_cart_actuality, clear_stored_messages
+from tgbot.utils.utils import check_cart_actuality
 
 
 async def get_cart(msg: types.Message, bot: Bot, state: FSMContext):
