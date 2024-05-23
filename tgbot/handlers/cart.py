@@ -42,7 +42,7 @@ async def del_cart_item(cbk: types.CallbackQuery, bot: Bot, state: FSMContext):
         await cbk.answer('Товар удалён из корзины!')
         upd_cart = await get_user_cart(cbk.from_user.id)
         await state.update_data({'cart': upd_cart})
-        await cbk.message.edit_text(f"{CART_DESC}Позиции в корзине <b>({len(upd_cart)})</b>:", reply_markup=get_cart_ikb(upd_cart, PREF.cart_del, -1), parse_mode=ParseMode.HTML)
+        await cbk.message.edit_text(f"{CART_DESC}Позиции в корзине <b>({len(upd_cart)})</b>:", reply_markup=get_cart_ikb(upd_cart, PREF.cart_del), parse_mode=ParseMode.HTML)
     else:
         await cbk.answer('Ошибка при удалении товара!')
 

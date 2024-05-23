@@ -2,14 +2,14 @@
 import logging
 import pprint
 
-from aiogram import types, Bot
+from aiogram import types, Bot, exceptions
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardRemove
 
 from dj_admin.models import ItemGroup
 
-from tgbot.keyboards.inline import get_catalog_ikb, get_item_ikb, get_cart_ikb
+from tgbot.keyboards.inline import get_catalog_ikb, get_item_ikb, get_cart_ikb, CartCbData, CartActions
 from tgbot.orm.commands import get_groups, add_or_update_user, get_category, get_goods_items, get_one_item, add_to_cart, \
     check_in_cart, get_user_cart
 from tgbot.settings import PREF, DJANGO_HOST, CART_DESC
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def get_catalog(msg: types.Message, bot: Bot, state: FSMContext):
+    logger.info(f'{msg.from_user.id} ({msg.from_user.username}) get catalog request')
     already_msg_id = False
     if await state.get_state() == StepsFSM.select_item:
         data = await state.get_data()
@@ -134,46 +135,59 @@ async def get_goods_item(cbk: types.CallbackQuery, bot: Bot, state: FSMContext):
     if in_cart:
         caption += f"\n В корзине уже находится {in_cart.qty} шт. на сумму {in_cart.qty*item.price}.\nСколько хотите ещё добавить?"
     image = types.InputMediaPhoto(media=f"{DJANGO_HOST}{item.image.url}", caption=caption, parse_mode=ParseMode.HTML)
-    await cbk.message.edit_media(image,
-                                 reply_markup=get_item_ikb(item_id,
-                                                           {'name': 'К товарам', 'act': f"{PREF.item}_page_1"},
-                                                           qty=1,
-                                                           pref=PREF.cart_add)
-                                 )
+    try:
+        await cbk.message.edit_media(image,
+                                     reply_markup=get_item_ikb(
+                                         CartCbData(prev_page=1,
+                                                    item=item.pk,
+                                                    quantity=1,
+                                                    action=CartActions.increase
+                                                    )
+                                     ))
+    except exceptions.TelegramBadRequest as e:
+        logger.warning(f"{e}")
+        image = types.InputMediaPhoto(media=f"https://www.centervillage.co.jp/images/noimage.png", caption=caption,
+                                      parse_mode=ParseMode.HTML)
+        await cbk.message.edit_media(image,
+                                     reply_markup=get_item_ikb(
+                                         CartCbData(prev_page=1,
+                                                    item=item.pk,
+                                                    quantity=1,
+                                                    action=CartActions.increase
+                                                    )
+                                     ))
+        return
     await cbk.answer()
 
 
-async def manipulate_good_item(cbk: types.CallbackQuery, bot: Bot, state: FSMContext):
-    data = cbk.data.split(':')
+async def manipulate_good_item(cbk: types.CallbackQuery, bot: Bot, state: FSMContext, callback_data: CartCbData):
     caption = cbk.message.caption.splitlines()
     try:
-        item_id = int(data[1])
-        qty = int(data[2])
-        operator = data[3]
+        qty = callback_data.quantity
         qty_text = caption[3]
         summary = caption[4]
     except Exception as e:
         logger.error(f'In callback "{cbk.data}" called by {cbk.from_user.id} ({cbk.from_user.username}): {e}')
-        await cbk.answer(f'Ошибка в запросе или данных карточки: {cbk.data}')
+        await cbk.answer(f'Ошибка в данных карточки товара: {cbk.data}')
         return
-    item = await get_one_item(item_id)  # проверка товара на изменения в базе
-    if operator == '+':
+    item = await get_one_item(callback_data.item)  # проверка товара на изменения в базе
+    if callback_data.action == CartActions.increase:
         qty += 1
         qty_text = f"Количество: {qty}"
-    elif operator == '-':
+    elif callback_data.action == CartActions.decrease:
         if qty > 1:
             qty -= 1
             qty_text = f"Количество: {qty}"
         else:
             await cbk.answer('Меньше 1 шт добавить нельзя!')
             return
-    elif operator == '=':
+    elif callback_data.action == CartActions.cart_add:
         try:
             _ = caption[6]
-            old_qty = (await check_in_cart(cbk.from_user.id, item_id)).qty
+            old_qty = (await check_in_cart(cbk.from_user.id, callback_data.item)).qty
         except Exception as e:
             old_qty = 0
-        await add_to_cart(cbk.from_user.id, item_id, qty+old_qty)
+        await add_to_cart(cbk.from_user.id, callback_data.item, qty+old_qty)
         await cbk.answer('Добавлено в корзину!')
         st_dta = await state.get_data()
         cart_msg_id = st_dta.get('msg_cart_id')
@@ -188,11 +202,9 @@ async def manipulate_good_item(cbk: types.CallbackQuery, bot: Bot, state: FSMCon
     caption[2] = f"Цена: {price}"
     caption[4] = f"<u>Сумма выбранного: {qty*price}</u>"
     new_caption = "\n".join(caption)
+    callback_data.quantity = qty
     await cbk.message.edit_caption(caption=new_caption,
-                                   reply_markup=get_item_ikb(item_id,
-                                                           {'name': 'К товарам', 'act': f"{PREF.item}_page_1"},
-                                                           qty=qty,
-                                                           pref=PREF.cart_add),
+                                   reply_markup=get_item_ikb(callback_data),
                                    parse_mode=ParseMode.HTML)
     await cbk.answer()
 

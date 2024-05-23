@@ -11,6 +11,8 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, or_f
 from aiogram.fsm.storage.memory import MemoryStorage
+
+from tgbot.keyboards.inline import CartCbData
 # from aiogram.fsm.storage.redis import RedisStorage
 
 from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF
@@ -85,7 +87,7 @@ async def start():
     dp.callback_query.register(catalog.select_goods_cat, F.data.startswith(f'{PREF.category}_select_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.get_items_page, F.data.startswith(f'{PREF.item}_page_'), StepsFSM.select_item)
     dp.callback_query.register(catalog.get_goods_item, F.data.startswith(f'{PREF.item}_select_'), StepsFSM.select_item)
-    dp.callback_query.register(catalog.manipulate_good_item, F.data.startswith(f'{PREF.cart_add}:'), StepsFSM.select_item)
+    dp.callback_query.register(catalog.manipulate_good_item, StepsFSM.select_item, CartCbData.filter())
 
     # Обработчик вопросов FAQ
     dp.message.register(faq.get_questions, Command(commands='faq'))

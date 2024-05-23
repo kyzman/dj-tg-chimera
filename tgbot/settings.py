@@ -53,6 +53,12 @@ class Yookassa:
 
 
 @dataclass
+class Group:
+    id: int
+    url: str
+
+
+@dataclass
 class Db:
     host: str
     database: str
@@ -65,6 +71,7 @@ class Db:
 class Settings:
     bots: Bots
     yookassa: Yookassa
+    group: Group
 
 
 def get_settings(path: str):
@@ -74,12 +81,14 @@ def get_settings(path: str):
         bots=Bots(
             bot_token=env.str("TOKEN"),
             admin_id=env.int("ADMIN_ID"),
-            payments=env.str("PAYMENTS")
+            payments=env.str("PAYMENTS"),
             ),
         yookassa=Yookassa(
             account=env.str("ACCOUNT_ID"),
             secret=env.str("SECRET_KEY")
-            )
+            ),
+        group=Group(id=env.int("BOT_GROUP"),
+                    url=env.str("BOT_GROUP_URL"))
     )
 
 

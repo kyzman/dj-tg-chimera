@@ -23,8 +23,6 @@ async def check_cart_actuality(msg: types.Message, state: FSMContext) -> bool:
     return False
 
 
-
-
 async def clear_stored_messages(bot: Bot, current_chat_id, data: dict):
     if ids := data.get('identity'):
         if ids.get('chat_id') == current_chat_id:

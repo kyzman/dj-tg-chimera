@@ -1,12 +1,30 @@
 import pprint
+from enum import IntEnum, auto
 
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from django.core.paginator import Paginator
 
-from tgbot.settings import ITEMS_IN_PAGE
+from tgbot.settings import ITEMS_IN_PAGE, PREF
 
 
+class CartActions(IntEnum):
+    increase = auto()
+    decrease = auto()
+    cart_add = auto()
+
+
+class CartCbData(CallbackData, prefix=PREF.cart_add):
+    prev_page: int
+    item: int
+    quantity: int
+    action: CartActions
+
+
+# Не стал создавать CallBack Factory для выбора Групп, Категорий, Товаров и Вопросов, т.к. все они используют
+# одну клавиатуру лишь с разными префиксами. Ради этого создавать 4 отдельных класса (т.к. префикс задаётся для класса)
+# и 4 одинаковые клавиатуры, различающиеся только использованным внутри классом фабрики, считаю не целесообразным.
 def get_catalog_ikb(items: list = None, pref: str = '', page: int = 1, prev=None) -> InlineKeyboardMarkup:
     ikb = InlineKeyboardBuilder()
     nums1 = []
@@ -37,14 +55,17 @@ def get_catalog_ikb(items: list = None, pref: str = '', page: int = 1, prev=None
     return ikb.as_markup()
 
 
-def get_item_ikb(item, prev=None, qty: int = 1, pref: str = 'add') -> InlineKeyboardMarkup:
+def get_item_ikb(data: CartCbData) -> InlineKeyboardMarkup:
     ikb = InlineKeyboardBuilder()
-    ikb.button(text="+", callback_data=f"{pref}:{item}:{qty}:+")
-    ikb.button(text="-", callback_data=f"{pref}:{item}:{qty}:-")
-    ikb.button(text="🛒 В корзину", callback_data=f"{pref}:{item}:{qty}:=")
+    for label, action in (
+            ("+", CartActions.increase),
+            ("-", CartActions.decrease),
+            ("🛒", CartActions.cart_add),
+    ):
+        ikb.button(text=label, callback_data=CartCbData(action=action,
+                                                        **data.model_dump(include={"prev_page", "item", "quantity"})))
     ikb.adjust(3)
-    if prev:
-        ikb.button(text=prev.get('name', 'Назад'), callback_data=prev.get('act', 'unk'))
+    ikb.button(text="Назад", callback_data=f"{PREF.item}_page_{data.prev_page}")
     ikb.button(text="🚫 Отменить", callback_data="cancel_soft")
     ikb.adjust(2)
     return ikb.as_markup()
@@ -86,5 +107,11 @@ def payment_ikb(payment_url, payment_id):
         text='Проверить оплату',
         callback_data=f'check_{payment_id}'
     )
+    return builder.as_markup()
+
+
+def subscribe_ikb(subscribe_url):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Подписаться", url=subscribe_url)
     return builder.as_markup()
 

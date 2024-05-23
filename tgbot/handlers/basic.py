@@ -2,6 +2,7 @@ import logging
 import pprint
 
 from aiogram import Bot, types
+from aiogram.enums import ChatType
 from aiogram.fsm.context import FSMContext
 
 from tgbot.orm.commands import add_or_update_user
@@ -28,7 +29,8 @@ async def get_help(msg: types.Message, bot: Bot):
 
 
 async def unknown_command(msg: types.Message, bot: Bot):
-    await msg.answer(f'Привет {msg.from_user.first_name}.\nДля помощи введите /help\nДля регистрации(обновления) сведений введите /start\n'
+    if msg.chat.type == ChatType.PRIVATE:
+        await msg.answer(f'Привет {msg.from_user.first_name}.\nДля помощи введите /help\nДля регистрации(обновления) сведений введите /start\n'
                      'Внимание! Взаимодействуя с этим ботом(при отправке команд, кроме /help) вы соглашаетесь на обработку персональных данных.')
 
 
