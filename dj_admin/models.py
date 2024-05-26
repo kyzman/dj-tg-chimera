@@ -1,3 +1,7 @@
+import pprint
+
+from django.contrib.auth.models import User
+from django.core.mail import EmailMessage
 from django.db import models
 
 
@@ -81,3 +85,31 @@ class Order(TimeBasedModel):
 
     def __str__(self):
         return f"[{self.pk}] {self.delivery_address} от {self.updated.strftime('%d-%m-%Y %H:%M:%S')}"
+
+
+class Mailing(TimeBasedModel):
+    recipients = models.ManyToManyField(User, blank=True, verbose_name="Получатели")
+    title = models.CharField(max_length=255, verbose_name="Тема сообщения")
+    text = models.TextField(verbose_name="Содержание(текст) рассылки")
+    media = models.ImageField(upload_to="mailing/", blank=True, null=True, verbose_name="Вложенное изображение")
+    sent = models.BooleanField(default=False, verbose_name="Разослана")
+
+    def __str__(self):
+        return f"{self.title} [{self.created.strftime('%d-%m-%Y %H:%M:%S')}]"
+
+    class Meta:
+        verbose_name = 'Рассылку'
+        verbose_name_plural = 'Рассылки'
+
+    @property
+    def start_mailing(self):
+        recipients = [i.email for i in self.recipients.all()]
+        if self.sent:
+            return f"Рассылка была осуществлена {self.updated.strftime('%d-%m-%Y %H:%M:%S')}"
+        else:
+            self.sent = True
+            attach = self.media.path
+            mail = EmailMessage(subject=self.title, body=self.text, to=recipients)
+            mail.attach_file(attach)
+            self.save()
+            return f"Отправлено писем {mail.send()}"

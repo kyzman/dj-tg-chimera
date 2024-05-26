@@ -99,7 +99,6 @@ async def create_order_from_cart(user_id, address) -> Order | None:
         order = await Order.objects.acreate(user=user, cart=cart, delivery_address=address, summary=total_sum)
     except:
         return None
-    # create_xlsx_order(cart, order_no=order.pk, date=order.updated, address=order.delivery_address)
     return order
 
 

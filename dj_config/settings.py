@@ -148,3 +148,23 @@ MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
 XLSX_DIR = os.environ.get("XLSX_DIR", "")
+
+# Email options
+
+EMAIL_HOST = ''
+
+EMAIL_HOST_USER = ''
+
+EMAIL_HOST_PASSWORD = ''
+
+EMAIL_PORT = ''
+
+EMAIL_USE_TLS = True
+
+EMAIL_USE_SSL = True
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+SERVER_EMAIL = EMAIL_HOST_USER
+EMAIL_ADMIN = EMAIL_HOST_USER
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
