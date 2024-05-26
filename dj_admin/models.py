@@ -108,8 +108,9 @@ class Mailing(TimeBasedModel):
             return f"Рассылка была осуществлена {self.updated.strftime('%d-%m-%Y %H:%M:%S')}"
         else:
             self.sent = True
-            attach = self.media.path
             mail = EmailMessage(subject=self.title, body=self.text, to=recipients)
-            mail.attach_file(attach)
+            if self.media:
+                attach = self.media.path
+                mail.attach_file(attach)
             self.save()
             return f"Отправлено писем {mail.send()}"

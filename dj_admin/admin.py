@@ -23,9 +23,10 @@ class OrderDetailView(PermissionRequiredMixin, DetailView):
 
 
 class MailingAdmin(admin.ModelAdmin):
-    fields = ('title', 'text', 'media', 'sent')
+    fields = ('title', 'text', 'media', 'recipients', 'sent')
     list_display = ('title', 'sent', 'apply')
     readonly_fields = ('apply', 'sent')
+    filter_horizontal = ('recipients',)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -43,7 +44,6 @@ class MailingAdmin(admin.ModelAdmin):
                 extra_context['show_save'] = False
                 extra_context['show_save_and_add_another'] = False  # this not works if has_add_permision is True
         return self.changeform_view(request, object_id, form_url, extra_context)
-        # return super(TransferAdmin, self).change_view(request, object_id, extra_context=extra_context)
 
     def get_urls(self):
         return [
