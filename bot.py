@@ -15,7 +15,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from tgbot.keyboards.inline import CartCbData
 # from aiogram.fsm.storage.redis import RedisStorage
 
-from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF
+from tgbot.settings import settings, WEBHOOK_PATH, WEBHOOK, PREF, WEBHOOK_URL
 from tgbot.utils.commands import set_commands
 from tgbot.middlewares.security import CheckAllowedMiddleware
 from tgbot.handlers import basic, catalog, cart, pay, faq
@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 async def start_bot(bot: Bot):
     await set_commands(bot)
+    if WEBHOOK:
+        await bot.set_webhook(WEBHOOK_URL)
 
 
 async def stop_bot(bot: Bot):
